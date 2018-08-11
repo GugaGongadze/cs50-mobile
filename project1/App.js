@@ -6,20 +6,28 @@ import Clock from './components/Clock';
 
 export default class App extends Component {
   state = {
+    defaultWorkTime: 10,
+    defaultBreakTime: 5,
     seconds: '',
     minutes: '',
     display: '',
     pauseMoment: '',
-    paused: false
+    paused: false,
+    breakTime: false
   };
 
   componentDidMount() {
     this.countDown;
-    this.setState({
-      seconds: 1500 // 25 minute Pomodoro Timer
-    });
+    this.setState(
+      {
+        seconds: this.state.defaultWorkTime // 25 minute Pomodoro Timer
+      },
+      this.startCountDown
+    );
+  }
 
-    this.timer(1500);
+  startCountDown() {
+    this.timer(this.state.seconds);
   }
 
   componentWillUnmount() {
@@ -48,11 +56,25 @@ export default class App extends Component {
       if (secondsLeft < 0) {
         clearInterval(this.countDown);
         vibrate();
+        this.setState(
+          {
+            breakTime: !this.state.breakTime
+          },
+          this.displayNewTimer
+        );
         return;
       }
 
       this.displayTimeLeft(secondsLeft);
     }, 1000);
+  }
+
+  displayNewTimer() {
+    if (this.state.breakTime) {
+      this.timer(this.state.defaultBreakTime);
+    } else {
+      this.timer(this.state.defaultWorkTime);
+    }
   }
 
   displayTimeLeft(seconds) {
@@ -67,6 +89,12 @@ export default class App extends Component {
     });
   }
 
+  resumeCountDown = () => {
+    if (this.state.paused === false) {
+      this.timer(this.state.pauseMoment);
+    }
+  };
+
   onPauseToggle = () => {
     this.setState(
       {
@@ -76,13 +104,22 @@ export default class App extends Component {
     );
   };
 
-  resumeCountDown = () => {
-    if (this.state.paused === false) {
-      this.timer(this.state.pauseMoment);
-    }
+  onClearPress = () => {
+    clearInterval(this.countDown);
+    this.setState(
+      {
+        seconds: this.state.defaultWorkTime,
+        pauseMoment: this.state.defaultWorkTime,
+        breakTime: false,
+        paused: true
+      },
+      this.displayTimeLeft(this.state.seconds)
+    );
   };
 
   render() {
+    const { paused, display, breakTime } = this.state;
+
     return (
       <View>
         <LinearGradient
@@ -90,13 +127,18 @@ export default class App extends Component {
           style={styles.gradient}
         >
           <View style={styles.timer}>
-            <Text style={styles.title}>Pomodoro Timer</Text>
-            <Clock display={this.state.display} />
+            <Text style={styles.title}>
+              {breakTime ? 'Break Timer' : 'Work Timer'}
+            </Text>
+            <Clock display={display} />
           </View>
-          <Button
-            onPress={this.onPauseToggle}
-            title={this.state.paused ? 'Continue' : 'Pause'}
-          />
+          <View style={styles.buttons}>
+            <Button
+              onPress={this.onPauseToggle}
+              title={paused ? 'Continue' : 'Pause'}
+            />
+            <Button onPress={this.onClearPress} title="Clear" />
+          </View>
         </LinearGradient>
       </View>
     );
@@ -104,6 +146,11 @@ export default class App extends Component {
 }
 
 const styles = StyleSheet.create({
+  buttons: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'center'
+  },
   title: {
     fontSize: 28
   },
